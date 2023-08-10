@@ -2,6 +2,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
 using UserInformation.API.Context;
+using UserInformation.API.Services;
+
 namespace UserInformation.API
 {
 	public class Program
@@ -32,6 +34,8 @@ namespace UserInformation.API
 			{
 				options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
 			});
+
+			builder.Services.AddScoped<IUserService, UserService>();
 
 			var app = builder.Build();
 

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using UserInformation.API.Context;
 using UserInformation.API.Entities;
 using UserInformation.API.Models;
+using UserInformation.API.Services;
 
 namespace UserInformation.API.Controllers
 {
@@ -10,10 +11,12 @@ namespace UserInformation.API.Controllers
 	public class UserController : ControllerBase
 	{
 		private readonly UserInfoDbContext _context;
+		private readonly IUserService _userService;
 
-		public UserController(UserInfoDbContext context)
+		public UserController(UserInfoDbContext context, IUserService userService)
 		{
 			_context = context;
+			_userService = userService;
 		}
 
 		/// <summary>
@@ -28,78 +31,17 @@ namespace UserInformation.API.Controllers
 		/// Returns a 200 OK if the file is successfully uploaded.
 		/// </returns>
 		[HttpPost]
+		[Route("upload-csv")]
 		public async Task<IActionResult> UploadUserInfoCsvAsync([FromForm] IFormFile file)
 		{
-			if (file == null || file.Length == 0)
+			var resultMessage = await _userService.UploadUserInfoCsvAsync(file);
+
+			if (resultMessage.StartsWith("Invalid") || resultMessage == "No file was uploaded")
 			{
-				return BadRequest("No file was uploaded");
+				return BadRequest(resultMessage);
 			}
 
-			if (!Path.GetExtension(file.FileName).Equals(".csv", StringComparison.OrdinalIgnoreCase))
-			{
-				return BadRequest("Invalid file type");
-			}
-
-			var users = new List<UserDto>();
-
-			using (var reader = new StreamReader(file.OpenReadStream()))
-			{
-				while (!reader.EndOfStream)
-				{
-					var line = await reader.ReadLineAsync();
-					var values = line!.Split(',');
-
-					if (values.Length != 6)
-					{
-						return BadRequest("Invalid CSV format");
-					}
-
-					var user = new UserDto
-					{
-						Username = values[0],
-						UserId = values[1],
-						Age = int.Parse(values[2]),
-						City = values[3],
-						PhoneNumber = values[4],
-						Email = values[5]
-					};
-
-					var existingUser = _context.Users.FirstOrDefault(u => u.UserId == user.UserId);
-
-					if (existingUser == null)
-					{
-						users.Add(user);
-					}
-					else
-					{
-						// Update the existing user without adding to users list
-						existingUser.Username = user.Username;
-						existingUser.Age = user.Age;
-						existingUser.City = user.City;
-						existingUser.PhoneNumber = user.PhoneNumber;
-						existingUser.Email = user.Email;
-					}
-				}
-
-				foreach (var userDto in users)
-				{
-					var userEntity = new User
-					{
-						Username = userDto.Username,
-						UserId = userDto.UserId,
-						Age = userDto.Age,
-						City = userDto.City,
-						PhoneNumber = userDto.PhoneNumber,
-						Email = userDto.Email
-					};
-
-					_context.Users.Add(userEntity);
-				}
-
-				await _context.SaveChangesAsync();
-			}
-
-			return Ok("CSV file uploaded and processed successfully");
+			return Ok(resultMessage);
 		}
 
 		/// <summary>
