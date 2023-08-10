@@ -7,21 +7,25 @@ namespace UserInformation.API.Services
 	public class UserService : IUserService
 	{
 		private readonly UserInfoDbContext _context;
+		private readonly ILogger<UserService> _logger;
 
-		public UserService(UserInfoDbContext context)
+		public UserService(UserInfoDbContext context, ILogger<UserService> logger)
 		{
 			_context = context;
+			_logger = logger;
 		}
 
 		public async Task<string> UploadUserInfoCsvAsync(IFormFile file)
 		{
 			if (file == null || file.Length == 0)
 			{
+				_logger.LogError("No file was uploaded");
 				return "No file was uploaded";
 			}
 
 			if (!Path.GetExtension(file.FileName).Equals(".csv", StringComparison.OrdinalIgnoreCase))
 			{
+				_logger.LogError("Invalid file type");
 				return "Invalid file type";
 			}
 
@@ -36,6 +40,7 @@ namespace UserInformation.API.Services
 
 					if (values.Length != 6)
 					{
+						_logger.LogError("Invalid CSV format");
 						return "Invalid CSV format";
 					}
 
@@ -53,11 +58,12 @@ namespace UserInformation.API.Services
 
 					if (existingUser == null)
 					{
+						_logger.LogInformation("Adding new user with user identifier {UserId}", user.UserId);
 						users.Add(user);
 					}
 					else
 					{
-						// Update the existing user without adding to users list
+						_logger.LogInformation("Updating existing user with user identifier {UserId}", user.UserId);
 						existingUser.Username = user.Username;
 						existingUser.Age = user.Age;
 						existingUser.City = user.City;
@@ -81,8 +87,11 @@ namespace UserInformation.API.Services
 					_context.Users.Add(userEntity);
 				}
 
+				_logger.LogInformation("Saving changes to database");
 				await _context.SaveChangesAsync();
 			}
+
+			_logger.LogInformation("CSV file uploaded and processed successfully");
 
 			return "CSV file uploaded and processed successfully";
 		}

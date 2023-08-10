@@ -12,11 +12,13 @@ namespace UserInformation.API.Controllers
 	{
 		private readonly UserInfoDbContext _context;
 		private readonly IUserService _userService;
+		private readonly ILogger<UserController> _logger;
 
-		public UserController(UserInfoDbContext context, IUserService userService)
+		public UserController(UserInfoDbContext context, IUserService userService, ILogger<UserController> logger)
 		{
 			_context = context;
 			_userService = userService;
+			_logger = logger;
 		}
 
 		/// <summary>
@@ -38,9 +40,11 @@ namespace UserInformation.API.Controllers
 
 			if (resultMessage.StartsWith("Invalid") || resultMessage == "No file was uploaded")
 			{
+				_logger.LogError("Invalid file or no file was uploaded");
 				return BadRequest(resultMessage);
 			}
 
+			_logger.LogInformation("File was successfully uploaded");
 			return Ok(resultMessage);
 		}
 
@@ -66,6 +70,7 @@ namespace UserInformation.API.Controllers
 		{
 			if (limit <= 0)
 			{
+				_logger.LogError("Limit must be a positive integer");
 				return BadRequest("Limit must be a positive integer.");
 			}
 
@@ -73,13 +78,16 @@ namespace UserInformation.API.Controllers
 
 			if (sort == SortingFormat.Ascending)
 			{
+				_logger.LogInformation("Sorting users in ascending order");
 				query = query.OrderBy(u => u.Username);
 			}
 			else
 			{
+				_logger.LogInformation("Sorting users in descending order");
 				query = query.OrderByDescending(u => u.Username);
 			}
 
+			_logger.LogInformation("Getting users");
 			var users = query.Take(limit).ToList();
 
 			return Ok(users);
