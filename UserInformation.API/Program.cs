@@ -4,6 +4,7 @@ using NLog;
 using NLog.Web;
 using System.Text.Json.Serialization;
 using UserInformation.API.Context;
+using UserInformation.API.Middlewares;
 using UserInformation.API.Services;
 
 var logger = NLog.LogManager.Setup()
@@ -39,9 +40,9 @@ try
 	builder.Host.UseNLog();
 
 	builder.Services.AddDbContext<UserInfoDbContext>(options =>
-{
-	options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
-});
+	{
+		options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+	});
 
 	builder.Services.AddScoped<IUserService, UserService>();
 
@@ -70,6 +71,8 @@ try
 	app.UseHttpsRedirection();
 
 	app.UseAuthorization();
+	// Adding middleware to the pipeline to handle exceptions
+	app.UseCustomExceptionHandlerMiddleware();
 
 	app.MapControllers();
 
